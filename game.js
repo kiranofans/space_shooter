@@ -6,32 +6,7 @@ let currentGame = null;
 // Set initial canvas dimensions
 this.canvas.width = 800;
 this.canvas.height = 600;
-// Make canvas responsive
-const resizeCanvas = () => {
-  const container = this.canvas.parentElement;
-  if (!container) return;
 
-  // scale canvas to fit container width while keeping aspect ratio
-  const aspectRatio = 800 / 600; // original width/height
-  let newWidth = container.clientWidth;
-  let newHeight = newWidth / aspectRatio;
-
-  // optional: limit height so it doesn't exceed viewport
-  const maxHeight = window.innerHeight - 100; // leave some space for UI
-  if (newHeight > maxHeight) {
-    newHeight = maxHeight;
-    newWidth = newHeight * aspectRatio;
-  }
-
-  this.canvas.width = newWidth;
-  this.canvas.height = newHeight;
-
-  //Update scaling factors
-  this.scaleX=newWidth / this.orignalWidth;
-  this.scaleY=newHeight /this.orignalWidth;
-};
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas(); // initial call
 class Game {
 
   constructor() {
@@ -247,6 +222,7 @@ class Game {
     this.rafId = requestAnimationFrame(this.loop);
   }
 }
+
 
 // restart helper (cleans up old instance)
 function restartGame() {
