@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter</title>
+
+    <!-- Your game CSS -->
+    <link rel="stylesheet" href="/game_style.css">
+    <script type="module" src="/game.js"></script>
+ <!-- Your JS -->
+    <script type="module" src="/main_server.js"></script>
+</head>
+
+<body>
+    <header class='menu-bar'>
+        <h2>🚀 Space Shooter</h2>
+    </header>
+    <div class="container text-center my-4">
+        <div class="game-container">
+            <div id="game-ui" class="mb-3">
+                <span class="me-4">Score: <span id="score">0</span></span>
+                <span class="label-lives">Lives: <span id="lives">3</span></span>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+
+            <div id="game-over" class="game-over d-none">
+                <h2>Game Over</h2>
+                <p>Final Score: <span id="final-score">0</span></p>
+                <!-- inside #game-over -->
+                <button id="restart-btn" class="btn-secondary">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+   
+</body>
+ <footer>Copy Right. All rights reserved</footer>
+</html>
