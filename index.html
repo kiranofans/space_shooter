@@ -1,8 +1,93 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="theme-color" content="#071329" /><title>Sky Strike</title><link rel="stylesheet" href="/game_style.css" /></head>
-<body class="m-0 min-w-[320px] bg-[radial-gradient(circle_at_50%_-20%,#173c72,#071329_48%,#030815)] font-sans text-[#eff8ff]"><main class="mx-auto grid min-h-screen w-full max-w-[920px] content-center gap-4 px-5 py-6 max-[520px]:px-2.5 max-[520px]:py-4">
-<header class="relative text-center max-[520px]:grid max-[520px]:justify-items-center"><p class="mb-1 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">2D ARCADE DEFENSE</p><h1 class="m-0 text-[clamp(1.8rem,6vw,3rem)] font-bold tracking-[0.08em] text-white [text-shadow:0_0_24px_#0ba9ff99]">SKY STRIKE</h1><button id="sound-toggle" class="absolute right-0 top-2.5 cursor-pointer rounded-full border border-[#4a9dbd] bg-[#0c2448] px-3 py-1.5 text-xs text-[#b9efff] max-[520px]:static max-[520px]:mt-2.5" type="button" aria-label="Turn sound on or off">♫ Sound: On</button></header>
-<section class="relative w-full overflow-hidden rounded-[18px] border-2 border-[#397aa5] bg-[#071329] shadow-[0_0_0_4px_#14375c,0_20px_50px_#0008]" aria-label="Sky Strike game"><div id="game-ui" class="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-5 py-4 max-[520px]:p-3" aria-live="polite"><div class="grid gap-0.5 text-[0.65rem] font-extrabold uppercase tracking-[0.13em] text-[#9ec9df]"><span>Score</span><strong id="score" class="text-[1.15rem] tracking-[0.08em] text-white [text-shadow:0_0_10px_#33baff]">0000</strong></div><div class="grid gap-0.5 text-right text-[0.65rem] font-extrabold uppercase tracking-[0.13em] text-[#9ec9df]"><span>Lives</span><strong id="lives" class="text-[1.15rem] tracking-[0.08em] text-white [text-shadow:0_0_10px_#33baff]">♥ ♥ ♥</strong></div></div><canvas id="gameCanvas" class="block aspect-[4/3] w-full touch-none" width="800" height="600" aria-label="Game area"></canvas>
-<div id="start-screen" class="absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center"><p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">INCOMING HOSTILES</p><h2 class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">Ready to fly?</h2><p class="m-0 text-[#c0d7e8]">Move with the arrow keys. Hold Space to fire.</p><button id="start-btn" class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110" type="button">Start Mission</button><p class="m-0 text-xs text-[#9ec9df]">Mobile: use the controls below</p></div>
-<div id="pause-screen" class="hidden absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center" role="dialog" aria-modal="true"><p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">MISSION PAUSED</p><h2 class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">Paused</h2><div class="flex flex-wrap justify-center gap-3"><button id="resume-btn" class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110" type="button">Resume Game</button><button id="menu-btn" class="cursor-pointer rounded-[9px] border border-[#4a9dbd] bg-[#0c2448] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#b9efff] transition hover:-translate-y-0.5 hover:brightness-110" type="button">Back to Menu</button></div><p class="m-0 text-xs text-[#9ec9df]">Press Esc to resume.</p></div><div id="game-over" class="hidden absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center" role="dialog" aria-modal="true"><p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">MISSION COMPLETE</p><h2 class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">Game Over</h2><p class="m-0 text-[#c0d7e8]">Final score <strong id="final-score">0</strong></p><button id="restart-btn" class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110" type="button">Fly Again</button></div></section>
-<div class="flex justify-center gap-3 min-[700px]:hidden" aria-label="Touch controls"><button class="min-h-12 min-w-[70px] cursor-pointer select-none rounded-[10px] border border-[#488ab1] bg-[#102c4d] font-extrabold text-[#dff7ff] active:scale-95 active:bg-[#1e5685]" type="button" data-control="left" aria-label="Move left">◀</button><button class="min-h-12 min-w-24 cursor-pointer select-none rounded-[10px] border border-[#d4a848] bg-[#102c4d] font-extrabold text-[#ffe47c] active:scale-95 active:bg-[#1e5685]" type="button" data-control="fire" aria-label="Fire weapon">FIRE</button><button class="min-h-12 min-w-[70px] cursor-pointer select-none rounded-[10px] border border-[#488ab1] bg-[#102c4d] font-extrabold text-[#dff7ff] active:scale-95 active:bg-[#1e5685]" type="button" data-control="right" aria-label="Move right">▶</button></div><p class="m-0 text-center text-xs uppercase tracking-[0.14em] text-[#9ec9df]">Move · Fire · Survive</p></main><script type="module" src="/game.js"></script></body></html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071329" />
+    <title>Sky Strike</title>
+    <link rel="stylesheet" href="/game_style.css" />
+</head>
+
+<body
+    class="m-0 min-w-[320px] bg-[radial-gradient(circle_at_50%_-20%,#173c72,#071329_48%,#030815)] font-sans text-[#eff8ff]">
+    <main
+        class="mx-auto grid min-h-screen w-full max-w-[920px] content-center gap-4 px-5 py-6 max-[520px]:px-2.5 max-[520px]:py-4">
+        <header class="relative text-center max-[520px]:grid max-[520px]:justify-items-center">
+            <p class="mb-1 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">2D ARCADE DEFENSE</p>
+            <h1
+                class="m-0 text-[clamp(1.8rem,6vw,3rem)] font-bold tracking-[0.08em] text-white [text-shadow:0_0_24px_#0ba9ff99]">
+                SKY STRIKE</h1><button id="sound-toggle"
+                class="absolute right-0 top-2.5 cursor-pointer rounded-full border border-[#4a9dbd] bg-[#0c2448] px-3 py-1.5 text-xs text-[#b9efff] max-[520px]:static max-[520px]:mt-2.5"
+                type="button" aria-label="Turn sound on or off">♫ Sound: On</button>
+        </header>
+        <section
+            class="relative w-full overflow-hidden rounded-[18px] border-2 border-[#397aa5] bg-[#071329] shadow-[0_0_0_4px_#14375c,0_20px_50px_#0008]"
+            aria-label="Sky Strike game">
+            <div id="game-ui"
+                class="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-5 py-4 max-[520px]:p-3"
+                aria-live="polite">
+                <div class="grid gap-0.5 text-[0.65rem] font-extrabold uppercase tracking-[0.13em] text-[#9ec9df]">
+                    <span>Score</span><strong id="score"
+                        class="text-[1.15rem] tracking-[0.08em] text-white [text-shadow:0_0_10px_#33baff]">0000</strong>
+                </div>
+                <div
+                    class="grid gap-0.5 text-right text-[0.65rem] font-extrabold uppercase tracking-[0.13em] text-[#9ec9df]">
+                    <span>Lives</span><strong id="lives"
+                        class="text-[1.15rem] tracking-[0.08em] text-white [text-shadow:0_0_10px_#33baff]">♥ ♥
+                        ♥</strong></div>
+            </div><canvas id="gameCanvas" class="block aspect-[4/3] w-full touch-none" width="800" height="600"
+                aria-label="Game area"></canvas>
+            <div id="start-screen"
+                class="absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center">
+                <p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">INCOMING HOSTILES</p>
+                <h2
+                    class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">
+                    Ready to fly?</h2>
+                <p class="m-0 text-[#c0d7e8]">Move with the arrow keys. Hold Space to fire.</p><button id="start-btn"
+                    class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110"
+                    type="button">Start Mission</button>
+                <p class="m-0 text-xs text-[#9ec9df]">Mobile: use the controls below</p>
+            </div>
+            <div id="pause-screen"
+                class="hidden absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center"
+                role="dialog" aria-modal="true">
+                <p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">MISSION PAUSED</p>
+                <h2
+                    class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">
+                    Paused</h2>
+                <div class="flex flex-wrap justify-center gap-3"><button id="resume-btn"
+                        class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110"
+                        type="button">Resume Game</button><button id="menu-btn"
+                        class="cursor-pointer rounded-[9px] border border-[#4a9dbd] bg-[#0c2448] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#b9efff] transition hover:-translate-y-0.5 hover:brightness-110"
+                        type="button">Back to Menu</button></div>
+                <p class="m-0 text-xs text-[#9ec9df]">Press Esc to resume.</p>
+            </div>
+            <div id="game-over"
+                class="hidden absolute inset-0 z-20 grid place-content-center justify-items-center gap-3 bg-[linear-gradient(#071329d9,#071329ee)] p-6 text-center"
+                role="dialog" aria-modal="true">
+                <p class="m-0 text-[0.7rem] font-extrabold tracking-[0.2em] text-[#66d9ff]">MISSION COMPLETE</p>
+                <h2
+                    class="m-0 text-[clamp(2rem,8vw,4rem)] font-bold uppercase tracking-[0.08em] [text-shadow:0_0_25px_#43c6ff]">
+                    Game Over</h2>
+                <p class="m-0 text-[#c0d7e8]">Final score <strong id="final-score">0</strong></p>
+                <div class="flex flex-wrap justify-center gap-3"><button id="restart-btn"
+                        class="cursor-pointer rounded-[9px] border-0 bg-gradient-to-br from-[#78edff] to-[#36a9e8] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#02101c] shadow-[0_5px_18px_#009ce880] transition hover:-translate-y-0.5 hover:brightness-110"
+                        type="button">Fly Again</button><button id="game-over-menu-btn"
+                        class="cursor-pointer rounded-[9px] border border-[#4a9dbd] bg-[#0c2448] px-5 py-3 font-black uppercase tracking-[0.08em] text-[#b9efff] transition hover:-translate-y-0.5 hover:brightness-110"
+                        type="button">Back to Menu</button></div>
+            </div>
+        </section>
+        <div class="flex justify-center gap-3 min-[700px]:hidden" aria-label="Touch controls"><button
+                class="min-h-12 min-w-[70px] cursor-pointer select-none rounded-[10px] border border-[#488ab1] bg-[#102c4d] font-extrabold text-[#dff7ff] active:scale-95 active:bg-[#1e5685]"
+                type="button" data-control="left" aria-label="Move left">◀</button><button
+                class="min-h-12 min-w-24 cursor-pointer select-none rounded-[10px] border border-[#d4a848] bg-[#102c4d] font-extrabold text-[#ffe47c] active:scale-95 active:bg-[#1e5685]"
+                type="button" data-control="fire" aria-label="Fire weapon">FIRE</button><button
+                class="min-h-12 min-w-[70px] cursor-pointer select-none rounded-[10px] border border-[#488ab1] bg-[#102c4d] font-extrabold text-[#dff7ff] active:scale-95 active:bg-[#1e5685]"
+                type="button" data-control="right" aria-label="Move right">▶</button></div>
+        <p class="m-0 text-center text-xs uppercase tracking-[0.14em] text-[#9ec9df]">Move · Fire · Survive</p>
+    </main>
+    <script type="module" src="/game.js"></script>
+</body>
+
+</html>
