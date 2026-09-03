@@ -1,250 +1,43 @@
-// src/game.js
-import '/game_style.css';
-// file is in root folder
-let currentGame = null;
+const canvas = document.querySelector('#gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.querySelector('#score'), livesEl = document.querySelector('#lives');
+const startScreen = document.querySelector('#start-screen'), gameOverScreen = document.querySelector('#game-over'), finalScoreEl = document.querySelector('#final-score');
 
-// Set initial canvas dimensions
-this.canvas.width = 800;
-this.canvas.height = 600;
+// Music begins after Start Mission because browsers block autoplay with sound.
+const bgm = new Audio('/audio/Starfighter%20Ascent.mp3');
+bgm.loop = true;
+bgm.volume = 0.35;
+const playerSprite = document.createElement('video');
+playerSprite.src = '/assets/spaceship.webm';
+playerSprite.muted = true;
+playerSprite.loop = true;
+playerSprite.playsInline = true;
+const enemySprite = new Image(); enemySprite.src = '/assets/enemy.svg';
+let game, soundOn = true;
+
+class Sound {
+  constructor() { this.context = null; }
+  unlock() { if (!this.context) this.context = new AudioContext(); if (this.context.state === 'suspended') this.context.resume(); }
+  tone(freq, duration, type = 'sine', volume = .04) { if (!soundOn || !this.context) return; const osc = this.context.createOscillator(), gain = this.context.createGain(); osc.type = type; osc.frequency.value = freq; gain.gain.setValueAtTime(volume, this.context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, this.context.currentTime + duration); osc.connect(gain).connect(this.context.destination); osc.start(); osc.stop(this.context.currentTime + duration); }
+  shoot() { this.tone(700, .06, 'square', .025); } hit() { this.tone(115, .18, 'sawtooth', .055); }
+}
+const sound = new Sound();
 
 class Game {
-
-  constructor() {
-    this.canvas = document.getElementById('gameCanvas');
-    this.ctx = this.canvas.getContext('2d');
-
-    // Set explicit canvas dimensions
-    this.canvas.width = 800;
-    this.canvas.height = 600;
-
-    // Load game sprites (place images in /public/assets or correct relative path)
-    this.sprites = {
-      player: new Image(),
-      enemy: new Image()
-    };
-    this.sprites.player.src = '/assets/spaceship.svg';
-    this.sprites.enemy.src = '/assets/enemy.svg';
-
-    this.player = {
-      x: this.canvas.width / 2 - 20,
-      y: this.canvas.height - 50,
-      width: 40,
-      height: 40,
-      speed: 5,
-      moving: { left: false, right: false }
-    };
-
-    this.projectiles = [];
-    this.enemies = [];
-    this.score = 0;
-    this.lives = 3;
-    this.gameOver = false;
-
-    this.enemySpawnInterval = 2000;
-    this.lastSpawnTime = 0;
-
-    // bind handlers once and keep them so we can remove later
-    this.handleKeyDown = this.handleKeyDown.bind(this);
-    this.handleKeyUp = this.handleKeyUp.bind(this);
-    this.loop = this.gameLoop.bind(this);
-
-    this.bindEvents();
-    this.lastFrameTime = performance.now();
-    this.rafId = requestAnimationFrame(this.loop);
-
-    console.log('Game initialized');
-  }
-
-  bindEvents() {
-    window.addEventListener('keydown', this.handleKeyDown);
-    window.addEventListener('keyup', this.handleKeyUp);
-  }
-
-  unbindEvents() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
-  }
-
-  stop() {
-    // stop the animation frame and remove events
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.unbindEvents();
-    this.gameOver = true;
-  }
-
-  handleKeyDown(e) {
-    // use e.code for space (more reliable)
-    if (e.code === 'ArrowLeft') this.player.moving.left = true;
-    else if (e.code === 'ArrowRight') this.player.moving.right = true;
-    else if (e.code === 'Space') {
-      if (!this.gameOver) this.shoot();
-    }
-  }
-
-  handleKeyUp(e) {
-    if (e.code === 'ArrowLeft') this.player.moving.left = false;
-    else if (e.code === 'ArrowRight') this.player.moving.right = false;
-  }
-
-  shoot() {
-    this.projectiles.push({
-      x: this.player.x + this.player.width / 2 - 2,
-      y: this.player.y,
-      width: 4,
-      height: 10,
-      speed: 7
-    });
-  }
-
-  spawnEnemy() {
-    const currentTime = Date.now();
-    if (currentTime - this.lastSpawnTime > this.enemySpawnInterval) {
-      this.enemies.push({
-        x: Math.random() * (this.canvas.width - 30),
-        y: 0,
-        width: 30,
-        height: 30,
-        speed: 2
-      });
-      this.lastSpawnTime = currentTime;
-    }
-  }
-
-  checkCollision(rect1, rect2) {
-    return rect1.x < rect2.x + rect2.width &&
-      rect1.x + rect1.width > rect2.x &&
-      rect1.y < rect2.y + rect2.height &&
-      rect1.y + rect1.height > rect2.y;
-  }
-
-  updateProjectiles() {
-    this.projectiles = this.projectiles.filter(proj => proj.y + proj.height > 0);
-    this.projectiles.forEach(proj => proj.y -= proj.speed);
-  }
-
-  updateEnemies() {
-    let enemiesDestroyed = [];
-    let projectilesToRemove = new Set();
-
-    this.enemies = this.enemies.filter((enemy, enemyIndex) => {
-      enemy.y += enemy.speed;
-
-      // Check collision with player
-      if (this.checkCollision(this.player, enemy)) {
-        this.lives--;
-        document.getElementById('lives').textContent = this.lives;
-        if (this.lives <= 0) {
-          this.gameOver = true;
-          const go = document.getElementById('game-over');
-          if (go) go.classList.remove('hidden'); // use our 'hidden' class
-          document.getElementById('final-score').textContent = this.score;
-        }
-        return false;
-      }
-
-      // Check collision with projectiles
-      this.projectiles.forEach((proj, projIndex) => {
-        if (this.checkCollision(proj, enemy)) {
-          projectilesToRemove.add(projIndex);
-          enemiesDestroyed.push(enemyIndex);
-        }
-      });
-
-      return enemy.y < this.canvas.height;
-    });
-
-    // Remove destroyed enemies
-    this.enemies = this.enemies.filter((_, index) => !enemiesDestroyed.includes(index));
-
-    // Remove used projectiles
-    this.projectiles = this.projectiles.filter((_, index) => !projectilesToRemove.has(index));
-
-    // Update score
-    if (enemiesDestroyed.length > 0) {
-      this.score += enemiesDestroyed.length * 10;
-      document.getElementById('score').textContent = this.score;
-    }
-  }
-
-  update(deltaTime) {
-    if (this.gameOver) return;
-
-    const moveDistance = this.player.speed * (deltaTime / 16.667);
-
-    if (this.player.moving.left) {
-      this.player.x = Math.max(0, this.player.x - moveDistance);
-    }
-    if (this.player.moving.right) {
-      this.player.x = Math.min(this.canvas.width - this.player.width, this.player.x + moveDistance);
-    }
-
-    this.updateProjectiles();
-    this.spawnEnemy();
-    this.updateEnemies();
-  }
-
-  draw() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw player (guard drawImage if not loaded yet)
-    if (this.sprites.player.complete && this.sprites.player.naturalWidth !== 0) {
-      this.ctx.drawImage(this.sprites.player, this.player.x, this.player.y, this.player.width, this.player.height);
-    } else {
-      // fallback rectangle if sprite not ready
-      this.ctx.fillStyle = '#0f0';
-      this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
-    }
-
-    // Draw projectiles
-    this.ctx.fillStyle = '#fff';
-    this.projectiles.forEach(proj => {
-      this.ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
-    });
-
-    // Draw enemies
-    this.enemies.forEach(enemy => {
-      if (this.sprites.enemy.complete && this.sprites.enemy.naturalWidth !== 0) {
-        this.ctx.drawImage(this.sprites.enemy, enemy.x, enemy.y, enemy.width, enemy.height);
-      } else {
-        this.ctx.fillStyle = '#f00';
-        this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-      }
-    });
-  }
-
-  gameLoop(timestamp) {
-    const deltaTime = timestamp - this.lastFrameTime;
-    this.lastFrameTime = timestamp;
-
-    this.update(deltaTime);
-    this.draw();
-
-    this.rafId = requestAnimationFrame(this.loop);
-  }
+  constructor() { this.player = { x: 372, y: 510, w: 56, h: 56, speed: 380, tilt: 0, engine: 0 }; this.keys = { left: false, right: false, fire: false }; this.bullets = []; this.enemies = []; this.stars = Array.from({ length: 85 }, () => ({ x: Math.random() * 800, y: Math.random() * 600, r: Math.random() * 1.5 + .3, speed: 18 + Math.random() * 45 })); this.score = 0; this.lives = 3; this.running = true; this.lastSpawn = 0; this.lastShot = 0; this.elapsed = 0; this.lastTime = performance.now(); this.frame = this.frame.bind(this); requestAnimationFrame(this.frame); }
+  spawnEnemy() { const x = 24 + Math.random() * 710; this.enemies.push({ x, y: -55, w: 48, h: 48, speed: 70 + Math.random() * 70 + this.score * .4, phase: Math.random() * Math.PI * 2, drift: 25 + Math.random() * 45, spin: Math.random() > .5 ? 1 : -1 }); }
+  shoot() { this.bullets.push({ x: this.player.x + this.player.w / 2 - 4, y: this.player.y - 6, w: 8, h: 24, speed: 620, glow: 0 }); sound.shoot(); }
+  intersects(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+  damage() { this.lives--; sound.hit(); if (this.lives <= 0) { this.running = false; finalScoreEl.textContent = this.score; gameOverScreen.classList.remove('hidden'); } }
+  update(dt) { this.elapsed += dt; this.stars.forEach(s => { s.y += s.speed * dt; if (s.y > 600) { s.y = -3; s.x = Math.random() * 800; } }); const direction = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0); this.player.x = Math.max(0, Math.min(800 - this.player.w, this.player.x + direction * this.player.speed * dt)); this.player.tilt += ((direction * .22) - this.player.tilt) * Math.min(1, dt * 10); this.player.engine += dt * 12; if (this.keys.fire && this.elapsed - this.lastShot > .18) { this.shoot(); this.lastShot = this.elapsed; } if (this.elapsed - this.lastSpawn > Math.max(.38, 1.05 - this.score / 500)) { this.spawnEnemy(); this.lastSpawn = this.elapsed; } this.bullets.forEach(b => { b.y -= b.speed * dt; b.glow += dt * 14; }); this.bullets = this.bullets.filter(b => b.y > -30); this.enemies.forEach(e => { e.y += e.speed * dt; e.phase += e.spin * dt * 3; e.x += Math.sin(e.phase) * e.drift * dt; }); const removedBullets = new Set(); this.enemies = this.enemies.filter(enemy => { if (this.intersects(this.player, enemy)) { this.damage(); return false; } const bulletIndex = this.bullets.findIndex((bullet, i) => !removedBullets.has(i) && this.intersects(bullet, enemy)); if (bulletIndex >= 0) { removedBullets.add(bulletIndex); this.score += 10; sound.hit(); return false; } if (enemy.y > 620) { this.damage(); return false; } return true; }); this.bullets = this.bullets.filter((_, i) => !removedBullets.has(i)); scoreEl.textContent = String(this.score).padStart(4, '0'); livesEl.textContent = '♥ '.repeat(Math.max(0, this.lives)).trim() || '—'; }
+  drawSprite(sprite, entity, rotation = 0) { ctx.save(); ctx.translate(entity.x + entity.w / 2, entity.y + entity.h / 2); ctx.rotate(rotation); ctx.drawImage(sprite, -entity.w / 2, -entity.h / 2, entity.w, entity.h); ctx.restore(); }
+  draw() { ctx.fillStyle = '#071329'; ctx.fillRect(0, 0, 800, 600); this.stars.forEach(s => { ctx.globalAlpha = .35 + s.r / 3; ctx.fillStyle = '#b7e7ff'; ctx.fillRect(s.x, s.y, s.r, s.r); }); ctx.globalAlpha = 1; const p = this.player, flame = 15 + Math.sin(p.engine) * 6; ctx.fillStyle = '#ffb343'; ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(p.x + p.w / 2 - 9, p.y + p.h - 5); ctx.lineTo(p.x + p.w / 2, p.y + p.h + flame); ctx.lineTo(p.x + p.w / 2 + 9, p.y + p.h - 5); ctx.fill(); ctx.globalAlpha = 1; this.drawSprite(playerSprite, p, p.tilt); this.bullets.forEach(b => { ctx.fillStyle = '#d5faff'; ctx.shadowColor = '#4cdcff'; ctx.shadowBlur = 14 + Math.sin(b.glow) * 5; ctx.fillRect(b.x, b.y, b.w, b.h); }); ctx.shadowBlur = 0; this.enemies.forEach(e => this.drawSprite(enemySprite, e, Math.sin(e.phase) * .16)); }
+  frame(now) { const dt = Math.min(.05, (now - this.lastTime) / 1000); this.lastTime = now; if (this.running) this.update(dt); this.draw(); requestAnimationFrame(this.frame); }
 }
 
-
-// restart helper (cleans up old instance)
-function restartGame() {
-  const gameOverEl = document.getElementById('game-over');
-  if (currentGame) currentGame.stop();
-  document.getElementById('score').textContent = '0';
-  document.getElementById('lives').textContent = '3';
-  if (gameOverEl) gameOverEl.classList.add('hidden');
-  currentGame = new Game();
-}
-
-// export / expose to global so inline onclick still works (optional)
-window.restartGame = restartGame;
-
-// attach restart button listener (recommended)
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('restart-btn');
-  if (btn) btn.addEventListener('click', restartGame);
-});
-
-// start the game
-window.addEventListener('load', () => {
-  console.log('Page loaded, starting game');
-  currentGame = new Game();
-});
+function setControl(control, active) { if (game) game.keys[control] = active; }
+window.addEventListener('keydown', event => { if (['ArrowLeft', 'ArrowRight', 'Space', 'KeyA', 'KeyD'].includes(event.code)) event.preventDefault(); if (event.code === 'ArrowLeft' || event.code === 'KeyA') setControl('left', true); if (event.code === 'ArrowRight' || event.code === 'KeyD') setControl('right', true); if (event.code === 'Space') setControl('fire', true); });
+window.addEventListener('keyup', event => { if (event.code === 'ArrowLeft' || event.code === 'KeyA') setControl('left', false); if (event.code === 'ArrowRight' || event.code === 'KeyD') setControl('right', false); if (event.code === 'Space') setControl('fire', false); });
+document.querySelectorAll('[data-control]').forEach(button => { const control = button.dataset.control;['pointerdown', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => button.addEventListener(type, event => { event.preventDefault(); setControl(control, type === 'pointerdown'); })); });
+function startGame() { sound.unlock(); playerSprite.play(); if (soundOn) bgm.play(); game = new Game(); startScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); }
+document.querySelector('#start-btn').addEventListener('click', startGame); document.querySelector('#restart-btn').addEventListener('click', startGame); document.querySelector('#sound-toggle').addEventListener('click', event => { soundOn = !soundOn; soundOn ? bgm.play() : bgm.pause(); event.currentTarget.textContent = `♫ Sound: ${soundOn ? 'On' : 'Off'}`; });
