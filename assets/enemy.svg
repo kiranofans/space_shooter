@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
-    <!-- Enemy Fighter Jet -->
-    <path d="M15 5 L25 20 L15 25 L5 20 L15 5" fill="#ff0000" /> <!-- Main body -->
-    <path d="M5 15 L15 20 L25 15 L15 25 L5 15" fill="#ff0000" /> <!-- Wings -->
-    <path d="M13 10 L15 5 L17 10" fill="#aa0000"/> <!-- Cockpit -->
-</svg>

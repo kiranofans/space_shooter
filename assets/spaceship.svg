@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
-    <!-- Player Fighter Jet -->
-    <path d="M20 5 L25 25 L20 35 L15 25 L20 5" fill="#00ff00" /> <!-- Main body -->
-    <path d="M5 20 L20 25 L35 20 L20 30 L5 20" fill="#00ff00" /> <!-- Wings -->
-    <path d="M18 15 L20 5 L22 15" fill="#00aa00"/> <!-- Cockpit -->
-</svg>
