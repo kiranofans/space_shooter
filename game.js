@@ -12,7 +12,7 @@ playerSprite.src = '/assets/spaceship.webm';
 playerSprite.muted = true;
 playerSprite.loop = true;
 playerSprite.playsInline = true;
-const enemySprite = new Image(); enemySprite.src = '/assets/enemy.svg';
+const enemySprite = new Image(); enemySprite.src = '/assets/enemy_small.png';
 let game, soundOn = true;
 
 class Sound {
