@@ -75,7 +75,10 @@ function setupVolumeControls() {
   if (!toggleBtn) return null;
   const style = document.createElement('style');
   style.textContent = `
-    #sound-widget { display: inline-flex; flex-direction: column; align-items: stretch; gap: 8px; }
+    /* Changed flex-direction to row to align items horizontally */
+    #sound-widget { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; }
+    
+    /* Kept column direction here to stack BGM/Effects controls vertically */
     .volume-controls { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 12px sans-serif; color: #cfe8ff; }
     .volume-controls label { display: flex; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; }
     .volume-controls input[type=range] { width: 110px; accent-color: #4cdcff; }
@@ -89,6 +92,7 @@ function setupVolumeControls() {
 
   const wrap = document.createElement('div');
   wrap.className = 'volume-controls';
+  // Note: if soundOn is true, 'flex' will be used, overriding the CSS column definition above
   wrap.style.display = soundOn ? 'flex' : 'none';
   wrap.innerHTML = `
     <label>BGM <input type="range" id="bgm-volume" min="0" max="100" value="${Math.round(bgmVolume * 100)}"></label>
@@ -108,6 +112,6 @@ document.querySelector('#menu-btn').addEventListener('click', returnToMenu);
 document.querySelector('#game-over-menu-btn').addEventListener('click', returnToMenu);
 document.querySelector('#sound-toggle').addEventListener('click', event => {
   soundOn = !soundOn; soundOn ? bgm.play() : bgm.pause();
-  event.currentTarget.textContent = `♫ Sound: ${soundOn ? 'On' : 'Off'}`;
+  event.currentTarget.textContent = `${soundOn ? '🔊' : '🔇'} ${soundOn ? 'On' : 'Off'}`;
   if (volumeControls) volumeControls.style.display = soundOn ? 'flex' : 'none';
 });
