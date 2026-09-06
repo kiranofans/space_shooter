@@ -3,17 +3,19 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.querySelector('#score'), livesEl = document.querySelector('#lives');
 const startScreen = document.querySelector('#start-screen'), pauseScreen = document.querySelector('#pause-screen'), gameOverScreen = document.querySelector('#game-over'), finalScoreEl = document.querySelector('#final-score');
 
+// Live-adjustable volumes, wired up to sliders near the sound toggle further down.
+let bgmVolume = 0.35, sfxVolume = 1;
+
 // Music begins after Start Mission because browsers block autoplay with sound.
 const bgm = new Audio('/audio/Starfighter%20Ascent.mp3');
 bgm.loop = true;
-bgm.volume = 0.35;
+bgm.volume = bgmVolume;
 const playerSprite = document.createElement('video');
 playerSprite.src = '/assets/spaceship.webm';
 playerSprite.muted = true;
 playerSprite.loop = true;
 playerSprite.playsInline = true;
 const enemySprite = new Image(); enemySprite.src = '/assets/enemy_small.png';
-const playerExplosionSprite = new Image(); playerExplosionSprite.src = "/assets/player_explosion.webm";
 
 // ---- Explosion (death) & hit-flash (damaged-but-alive) effects ----
 // Drop a transparent .webm in for an animated effect, or a .png for a static one — both work.
@@ -26,21 +28,21 @@ const PLAYER_HIT_SRC = '/assets/spaceship_hit.png';
 const ENEMY_HIT_SRC = '/assets/enemy_small_hit.png';
 const HIT_FLASH_DURATION = 0.15; // seconds the hit sprite is shown
 
-function loadSprite(src) { if (/\.webm$/i.test(src)) { const v = document.createElement('video'); v.src = src; v.muted = true; v.playsInline = true; v.preload = 'auto'; return v; } const img = new Image(); img.src = src; return img; }
+function loadSprite(src) { if (/\.webm$/i.test(src)) { const v = document.createElement('video'); v.src = src; v.muted = true; v.playsInline = true; v.preload = 'auto'; v.addEventListener('error', () => console.warn(`[sprite] failed to load video: ${src}`)); return v; } const img = new Image(); img.addEventListener('error', () => console.warn(`[sprite] failed to load image: ${src}`)); img.addEventListener('load', () => console.log(`[sprite] loaded OK: ${src} (${img.naturalWidth}x${img.naturalHeight})`)); img.src = src; return img; }
 function spriteReady(sprite) { return sprite.tagName === 'VIDEO' ? sprite.readyState >= 2 : (sprite.complete && sprite.naturalWidth > 0); }
 const playerHitSprite = loadSprite(PLAYER_HIT_SRC);
 const enemyHitSprite = loadSprite(ENEMY_HIT_SRC);
 // Optional custom look for explosions: a static PNG works reliably (same technique as enemySprite below).
 // If you'd rather not supply an image at all, the particle burst alone still shows fine.
-const playerExplosionImg = /\.png$|\.jpg$|\.jpeg$/i.test(PLAYER_EXPLOSION_SRC) ? loadSprite(PLAYER_EXPLOSION_SRC) : null;
-const enemyExplosionImg = /\.png$|\.jpg$|\.jpeg$/i.test(ENEMY_EXPLOSION_SRC) ? loadSprite(ENEMY_EXPLOSION_SRC) : null;
+const playerExplosionImg = loadSprite(PLAYER_EXPLOSION_SRC);
+const enemyExplosionImg = loadSprite(ENEMY_EXPLOSION_SRC);
 
 let game, soundOn = true;
 
 class Sound {
   constructor() { this.context = null; }
   unlock() { if (!this.context) this.context = new AudioContext(); if (this.context.state === 'suspended') this.context.resume(); }
-  tone(freq, duration, type = 'sine', volume = .04) { if (!soundOn || !this.context) return; const osc = this.context.createOscillator(), gain = this.context.createGain(); osc.type = type; osc.frequency.value = freq; gain.gain.setValueAtTime(volume, this.context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, this.context.currentTime + duration); osc.connect(gain).connect(this.context.destination); osc.start(); osc.stop(this.context.currentTime + duration); }
+  tone(freq, duration, type = 'sine', volume = .04) { if (!soundOn || !this.context || sfxVolume <= 0) return; const osc = this.context.createOscillator(), gain = this.context.createGain(); osc.type = type; osc.frequency.value = freq; gain.gain.setValueAtTime(volume * sfxVolume, this.context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, this.context.currentTime + duration); osc.connect(gain).connect(this.context.destination); osc.start(); osc.stop(this.context.currentTime + duration); }
   shoot() { this.tone(700, .06, 'square', .025); } hit() { this.tone(115, .18, 'sawtooth', .055); }
 }
 const sound = new Sound();
@@ -65,4 +67,47 @@ window.addEventListener('keyup', event => { if (event.code === 'ArrowLeft') setC
 document.querySelectorAll('[data-control]').forEach(button => { const control = button.dataset.control;['pointerdown', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => button.addEventListener(type, event => { event.preventDefault(); setControl(control, type === 'pointerdown'); })); });
 function startGame() { if (game) game.running = false; sound.unlock(); playerSprite.play(); if (soundOn) bgm.play(); game = new Game(); startScreen.classList.add('hidden'); pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); }
 function returnToMenu() { if (game) game.running = false; game = null; bgm.pause(); bgm.currentTime = 0; playerSprite.pause(); scoreEl.textContent = '0000'; livesEl.textContent = '♥ ♥ ♥'; pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); }
-document.querySelector('#start-btn').addEventListener('click', startGame); document.querySelector('#restart-btn').addEventListener('click', startGame); document.querySelector('#resume-btn').addEventListener('click', togglePause); document.querySelector('#menu-btn').addEventListener('click', returnToMenu); document.querySelector('#game-over-menu-btn').addEventListener('click', returnToMenu); document.querySelector('#sound-toggle').addEventListener('click', event => { soundOn = !soundOn; soundOn ? bgm.play() : bgm.pause(); event.currentTarget.textContent = `♫ Sound: ${soundOn ? 'On' : 'Off'}`; });
+// ---- Sound widget (toggle + BGM/effects sliders) — stays right where #sound-toggle originally sat in the page ----
+// The existing #sound-toggle button is moved (not duplicated) into this widget, so its
+// click handler (attached further below) keeps working exactly as before.
+function setupVolumeControls() {
+  const toggleBtn = document.querySelector('#sound-toggle');
+  if (!toggleBtn) return null;
+  const style = document.createElement('style');
+  style.textContent = `
+    #sound-widget { display: inline-flex; flex-direction: column; align-items: stretch; gap: 8px; }
+    .volume-controls { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 12px sans-serif; color: #cfe8ff; }
+    .volume-controls label { display: flex; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; }
+    .volume-controls input[type=range] { width: 110px; accent-color: #4cdcff; }
+  `;
+  document.head.appendChild(style);
+
+  const widget = document.createElement('div');
+  widget.id = 'sound-widget';
+  toggleBtn.replaceWith(widget); // widget takes over the button's exact original spot in the layout
+  widget.appendChild(toggleBtn); // then the button moves inside it, still in that same spot
+
+  const wrap = document.createElement('div');
+  wrap.className = 'volume-controls';
+  wrap.style.display = soundOn ? 'flex' : 'none';
+  wrap.innerHTML = `
+    <label>BGM <input type="range" id="bgm-volume" min="0" max="100" value="${Math.round(bgmVolume * 100)}"></label>
+    <label>Effects <input type="range" id="sfx-volume" min="0" max="100" value="${Math.round(sfxVolume * 100)}"></label>
+  `;
+  widget.appendChild(wrap);
+  wrap.querySelector('#bgm-volume').addEventListener('input', event => { bgmVolume = Number(event.target.value) / 100; bgm.volume = bgmVolume; });
+  wrap.querySelector('#sfx-volume').addEventListener('input', event => { sfxVolume = Number(event.target.value) / 100; });
+  return wrap;
+}
+const volumeControls = setupVolumeControls();
+
+document.querySelector('#start-btn').addEventListener('click', startGame);
+document.querySelector('#restart-btn').addEventListener('click', startGame);
+document.querySelector('#resume-btn').addEventListener('click', togglePause);
+document.querySelector('#menu-btn').addEventListener('click', returnToMenu);
+document.querySelector('#game-over-menu-btn').addEventListener('click', returnToMenu);
+document.querySelector('#sound-toggle').addEventListener('click', event => {
+  soundOn = !soundOn; soundOn ? bgm.play() : bgm.pause();
+  event.currentTarget.textContent = `♫ Sound: ${soundOn ? 'On' : 'Off'}`;
+  if (volumeControls) volumeControls.style.display = soundOn ? 'flex' : 'none';
+});
