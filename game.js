@@ -65,30 +65,32 @@ function togglePause() { if (!game || !game.running) return; game.paused = !game
 window.addEventListener('keydown', event => { if (event.code === 'Escape') { togglePause(); return; } if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault(); if (event.code === 'ArrowLeft') setControl('left', true); if (event.code === 'ArrowRight') setControl('right', true); if (event.code === 'ArrowUp') setControl('up', true); if (event.code === 'ArrowDown') setControl('down', true); if (event.code === 'Space') setControl('fire', true); });
 window.addEventListener('keyup', event => { if (event.code === 'ArrowLeft') setControl('left', false); if (event.code === 'ArrowRight') setControl('right', false); if (event.code === 'ArrowUp') setControl('up', false); if (event.code === 'ArrowDown') setControl('down', false); if (event.code === 'Space') setControl('fire', false); });
 document.querySelectorAll('[data-control]').forEach(button => { const control = button.dataset.control;['pointerdown', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => button.addEventListener(type, event => { event.preventDefault(); setControl(control, type === 'pointerdown'); })); });
-function startGame() { if (game) game.running = false; sound.unlock(); playerSprite.play(); if (soundOn) bgm.play(); game = new Game(); startScreen.classList.add('hidden'); pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); }
-function returnToMenu() { if (game) game.running = false; game = null; bgm.pause(); bgm.currentTime = 0; playerSprite.pause(); scoreEl.textContent = '0000'; livesEl.textContent = '♥ ♥ ♥'; pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); }
+function startGame() { if (game) game.running = false; sound.unlock(); playerSprite.play(); if (soundOn) bgm.play(); game = new Game(); startScreen.classList.add('hidden'); pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); const mc = document.querySelector('#mobile-controls'); if(mc) { mc.classList.remove('hidden'); mc.classList.add('flex'); } }
+function returnToMenu() { if (game) game.running = false; game = null; bgm.pause(); bgm.currentTime = 0; playerSprite.pause(); scoreEl.textContent = '0000'; livesEl.textContent = '♥ ♥ ♥'; pauseScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); const mc = document.querySelector('#mobile-controls'); if(mc) { mc.classList.add('hidden'); mc.classList.remove('flex'); } }
 // ---- Sound widget (toggle + BGM/effects sliders) — stays right where #sound-toggle originally sat in the page ----
 // The existing #sound-toggle button is moved (not duplicated) into this widget, so its
 // click handler (attached further below) keeps working exactly as before.
 function setupVolumeControls() {
   const toggleBtn = document.querySelector('#sound-toggle');
   if (!toggleBtn) return null;
+  toggleBtn.classList.remove('absolute', 'right-0', 'top-2.5', 'max-[520px]:static', 'max-[520px]:mt-2.5');
+  
   const style = document.createElement('style');
   style.textContent = `
-    /* Changed flex-direction to row to align items horizontally */
-    #sound-widget { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; }
-    
-    /* Kept column direction here to stack BGM/Effects controls vertically */
-    .volume-controls { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 12px sans-serif; color: #cfe8ff; }
+    #sound-widget { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; position: absolute; right: 0; top: 10px; z-index: 50; }
+    .volume-controls { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font: 12px sans-serif; color: #cfe8ff; background: rgba(12, 36, 72, 0.85); padding: 8px; border-radius: 8px; border: 1px solid #4a9dbd; backdrop-filter: blur(4px); }
     .volume-controls label { display: flex; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; }
     .volume-controls input[type=range] { width: 110px; accent-color: #4cdcff; }
+    @media (max-width: 520px) {
+      #sound-widget { flex-direction: column; align-items: flex-end; right: 10px; top: 10px; gap: 4px; }
+    }
   `;
   document.head.appendChild(style);
 
   const widget = document.createElement('div');
   widget.id = 'sound-widget';
   toggleBtn.replaceWith(widget); // widget takes over the button's exact original spot in the layout
-  widget.appendChild(toggleBtn); // then the button moves inside it, still in that same spot
+  widget.appendChild(toggleBtn); // then the button moves inside it
 
   const wrap = document.createElement('div');
   wrap.className = 'volume-controls';
@@ -112,6 +114,67 @@ document.querySelector('#menu-btn').addEventListener('click', returnToMenu);
 document.querySelector('#game-over-menu-btn').addEventListener('click', returnToMenu);
 document.querySelector('#sound-toggle').addEventListener('click', event => {
   soundOn = !soundOn; soundOn ? bgm.play() : bgm.pause();
-  event.currentTarget.textContent = `${soundOn ? '🔊' : '🔇'} ${soundOn ? 'On' : 'Off'}`;
+  event.currentTarget.textContent = soundOn ? '🔊' : '🔇';
   if (volumeControls) volumeControls.style.display = soundOn ? 'flex' : 'none';
 });
+
+// ---- Mobile Touch Controls (Canvas Drag / Virtual Joystick) ----
+let activeTouchId = null;
+let touchStartX = 0;
+let touchStartY = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (!game || !game.running || game.paused) return;
+    if (activeTouchId !== null) return;
+    
+    const touch = e.changedTouches[0];
+    activeTouchId = touch.identifier;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!game || !game.running || game.paused || activeTouchId === null) return;
+    
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === activeTouchId) {
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            const threshold = 15;
+            
+            game.keys.left = deltaX < -threshold;
+            game.keys.right = deltaX > threshold;
+            game.keys.up = deltaY < -threshold;
+            game.keys.down = deltaY > threshold;
+            
+            if (deltaX < -40) touchStartX = touch.clientX + 40;
+            if (deltaX > 40) touchStartX = touch.clientX - 40;
+            if (deltaY < -40) touchStartY = touch.clientY + 40;
+            if (deltaY > 40) touchStartY = touch.clientY - 40;
+            
+            e.preventDefault();
+            break;
+        }
+    }
+}, { passive: false });
+
+const handleTouchEnd = (e) => {
+    if (activeTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === activeTouchId) {
+            activeTouchId = null;
+            if (game) {
+                game.keys.left = false;
+                game.keys.right = false;
+                game.keys.up = false;
+                game.keys.down = false;
+            }
+            break;
+        }
+    }
+};
+
+canvas.addEventListener('touchend', handleTouchEnd);
+canvas.addEventListener('touchcancel', handleTouchEnd);
+
