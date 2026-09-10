@@ -1,3 +1,8 @@
+import spaceshipVideoUrl from './assets/spaceship.webm';
+import enemyImgUrl from './assets/enemy_small.png';
+import bgmUrl from './assets/audio/StarfighterAscent_small.mp3';
+import playerExplosionImgUrl from './assets/player_explosion.webm';
+
 const canvas = document.querySelector('#gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.querySelector('#score'), livesEl = document.querySelector('#lives');
@@ -15,17 +20,17 @@ resizeCanvas();
 let bgmVolume = 0.35, sfxVolume = 1;
 
 // Music begins after Start Mission because browsers block autoplay with sound.
-const bgm = new Audio('/audio/Starfighter%20Ascent.mp3');
+const bgm = new Audio(bgmUrl);
 bgm.loop = true;
 bgm.volume = bgmVolume;
 const playerSprite = document.createElement('video');
-playerSprite.src = '/assets/spaceship.webm';
+playerSprite.src = spaceshipVideoUrl;
 playerSprite.muted = true;
 playerSprite.loop = true;
 playerSprite.playsInline = true;
-const enemySprite = new Image(); enemySprite.src = '/assets/enemy_small.png';
+const enemySprite = new Image(); enemySprite.src = enemyImgUrl;
 
-const PLAYER_EXPLOSION_SRC = '/assets/player_explosion.png';
+const PLAYER_EXPLOSION_SRC = playerExplosionImgUrl;
 const ENEMY_EXPLOSION_SRC = '/assets/enemy_explosion.png';
 const PLAYER_HIT_SRC = '/assets/spaceship_hit.png';
 const ENEMY_HIT_SRC = '/assets/enemy_small_hit.png';
