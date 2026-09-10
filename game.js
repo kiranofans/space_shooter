@@ -133,8 +133,7 @@ function setupVolumeControls() {
     .volume-controls input[type=range] { width: 110px; accent-color: #4cdcff; }
     @media (max-width: 520px) {
       #sound-widget { flex-direction: column; align-items: flex-end; right: 10px; top: 10px; gap: 4px; }
-    }
-  `;
+    }`;
   document.head.appendChild(style);
 
   const widget = document.createElement('div');
@@ -150,8 +149,22 @@ function setupVolumeControls() {
     <label>Effects <input type="range" id="sfx-volume" min="0" max="100" value="${Math.round(sfxVolume * 100)}"></label>
   `;
   widget.appendChild(wrap);
-  wrap.querySelector('#bgm-volume').addEventListener('input', event => { bgmVolume = Number(event.target.value) / 100; bgm.volume = bgmVolume; });
-  wrap.querySelector('#sfx-volume').addEventListener('input', event => { sfxVolume = Number(event.target.value) / 100; });
+  wrap.querySelector('#bgm-volume').addEventListener('input', event => {
+    bgmVolume = Number(event.target.value) / 100; bgm.volume = bgmVolume;
+  });
+  wrap.querySelector('#sfx-volume').addEventListener('input', event => {
+    sfxVolume = Number(event.target.value) / 100;
+  });
+  // ---- Auto-Close on Outside Click/Tap ----
+  window.addEventListener('pointerdown', (e) => {
+    const widget = document.querySelector('#sound-widget');
+
+    // If the user clicked somewhere on the screen that is NOT inside the sound widget,
+    // and the volume controls are currently visible, hide them.
+    if (widget && !widget.contains(e.target) && volumeControls && volumeControls.style.display === 'flex') {
+      volumeControls.style.display = 'none';
+    }
+  });
   return wrap;
 }
 const volumeControls = setupVolumeControls();
