@@ -100,7 +100,28 @@ class Game {
     this.explosions = this.explosions.filter(ex => (this.elapsed - ex.start) < ex.duration);
     scoreEl.textContent = String(this.score).padStart(4, '0'); livesEl.textContent = '♥ '.repeat(Math.max(0, this.lives)).trim() || '—';
   }
-  drawSprite(sprite, entity, rotation = 0) { if (!spriteReady(sprite)) return; ctx.save(); ctx.translate(entity.x + entity.w / 2, entity.y + entity.h / 2); ctx.rotate(rotation); try { ctx.drawImage(sprite, -entity.w / 2, -entity.h / 2, entity.w, entity.h); } catch (err) { } ctx.restore(); }
+  drawSprite(sprite, entity, rotation = 0) {
+    if (!spriteReady(sprite)) return; ctx.save();
+    ctx.translate(entity.x + entity.w / 2, entity.y + entity.h / 2);
+    ctx.rotate(rotation);
+
+    // Get true source dimensions
+    const sourceW = sprite.tagName === 'VIDEO' ? sprite.videoWidth : sprite.naturalWidth;
+    const sourceH = sprite.tagName === 'VIDEO' ? sprite.videoHeight : sprite.naturalHeight;
+
+    let renderW = entity.w;
+    let renderH = entity.h;
+
+    // Preserve original aspect ratio relative to entity height
+    if (sourceW && sourceH) {
+      const aspectRatio = sourceW / sourceH;
+      renderW = entity.h * aspectRatio;
+    }
+
+    try {
+      ctx.drawImage(sprite, -renderW / 2, -renderH / 2, renderW, renderH);
+    } catch (err) { } ctx.restore();
+  }
   draw() {
     ctx.fillStyle = '#071329';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -207,19 +228,30 @@ window.addEventListener('touchmove', (e) => {
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
     if (touch.identifier === activeTouchId) {
+      // 1. Calculate exactly how far the finger moved since the last frame
       const deltaX = touch.clientX - touchStartX;
       const deltaY = touch.clientY - touchStartY;
-      const threshold = 15;
 
-      game.keys.left = deltaX < -threshold;
-      game.keys.right = deltaX > threshold;
-      game.keys.up = deltaY < -threshold;
-      game.keys.down = deltaY > threshold;
+      // 2. Instantly move the player by that exact pixel amount (1:1 mapping)
+      game.player.x += deltaX;
+      game.player.y += deltaY;
 
-      if (deltaX < -40) touchStartX = touch.clientX + 40;
-      if (deltaX > 40) touchStartX = touch.clientX - 40;
-      if (deltaY < -40) touchStartY = touch.clientY + 40;
-      if (deltaY > 40) touchStartY = touch.clientY - 40;
+      // 3. Prevent the ship from being dragged off the screen
+      game.player.x = Math.max(0, Math.min(canvas.width - game.player.w, game.player.x));
+      game.player.y = Math.max(0, Math.min(canvas.height - game.player.h, game.player.y));
+
+      // 4. Temporarily trigger the directional keys just so the ship still tilts visually!
+      if (deltaX < -1.5) {
+        game.keys.left = true; game.keys.right = false;
+      } else if (deltaX > 1.5) {
+        game.keys.left = false; game.keys.right = true;
+      } else {
+        game.keys.left = false; game.keys.right = false;
+      }
+
+      // 5. Reset the start position to the current finger position for the next frame
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
 
       e.preventDefault();
       break;
