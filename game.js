@@ -43,7 +43,8 @@ const enemyHitSprite = loadSprite(ENEMY_HIT_SRC);
 const playerExplosionImg = loadSprite(PLAYER_EXPLOSION_SRC);
 const enemyExplosionImg = loadSprite(ENEMY_EXPLOSION_SRC);
 
-let game, soundOn = true;
+// By default, sound is OFF. You must click the speaker icon in-game to enable it.
+let game, soundOn = false;
 
 class Sound {
   constructor() { this.context = null; }
@@ -77,7 +78,28 @@ class Game {
   shoot() { this.bullets.push({ x: this.player.x + this.player.w / 2 - 4, y: this.player.y - 6, w: 8, h: 24, speed: 620, glow: 0 }); sound.shoot(); }
   spawnExplosion(entity, img) { const cx = entity.x + entity.w / 2, cy = entity.y + entity.h / 2; const particles = Array.from({ length: 16 }, () => ({ angle: Math.random() * Math.PI * 2, speed: 70 + Math.random() * 160, radius: 2 + Math.random() * 3 })); this.explosions.push({ x: cx, y: cy, w: entity.w, h: entity.h, start: this.elapsed, duration: 0.5, particles, img: img || null }); }
   intersects(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
-  damage() { this.lives--; sound.hit(); if (this.lives <= 0) { this.running = false; this.spawnExplosion(this.player, playerExplosionImg); finalScoreEl.textContent = this.score; gameOverScreen.classList.remove('hidden'); } else { this.player.hitUntil = this.elapsed + HIT_FLASH_DURATION; } }
+
+  damage() {
+    this.lives--;
+    // ADD THIS: Triggers a heavy physical rumble on mobile devices
+    if (navigator.vibrate) navigator.vibrate([100, 50, 200]);
+    sound.hit();
+    if (this.lives <= 0) {
+      this.running = false;
+      this.spawnExplosion(this.player, playerExplosionImg);
+      finalScoreEl.textContent = this.score;
+      gameOverScreen.classList.remove('hidden');
+
+    } else {
+      this.player.hitUntil = this.elapsed + HIT_FLASH_DURATION;
+
+      // OPTIONAL: A tiny 30ms tap for normal hits (delete if you only want it on death)
+      // Only vibrate if the user is actively touching the screen (bypasses browser blocks)
+      if (typeof activeTouchId !== 'undefined' && activeTouchId !== null && navigator.vibrate) {
+        navigator.vibrate(30);
+      }
+    }
+  }
   update(dt) {
     this.elapsed += dt;
     this.stars.forEach(s => { s.y += s.speed * dt; if (s.y > canvas.height) { s.y = -3; s.x = Math.random() * canvas.width; } });
@@ -139,7 +161,16 @@ class Game {
 }
 
 function setControl(control, active) { if (game) game.keys[control] = active; }
-function togglePause() { if (!game || !game.running) return; game.paused = !game.paused; Object.keys(game.keys).forEach(key => { game.keys[key] = false; }); pauseScreen.classList.toggle('hidden', !game.paused); if (game.paused) bgm.pause(); else if (soundOn) bgm.play(); }
+function togglePause() {
+  if (!game || !game.running) return;
+  game.paused = !game.paused;
+  Object.keys(game.keys).forEach(key => {
+    game.keys[key] = false;
+  });
+  pauseScreen.classList.toggle('hidden', !game.paused);
+  if (game.paused) bgm.pause();
+  else if (soundOn) bgm.play();
+}
 window.addEventListener('keydown', event => { if (event.code === 'Escape') { togglePause(); return; } if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault(); if (event.code === 'ArrowLeft') setControl('left', true); if (event.code === 'ArrowRight') setControl('right', true); if (event.code === 'ArrowUp') setControl('up', true); if (event.code === 'ArrowDown') setControl('down', true); if (event.code === 'Space') setControl('fire', true); });
 window.addEventListener('keyup', event => { if (event.code === 'ArrowLeft') setControl('left', false); if (event.code === 'ArrowRight') setControl('right', false); if (event.code === 'ArrowUp') setControl('up', false); if (event.code === 'ArrowDown') setControl('down', false); if (event.code === 'Space') setControl('fire', false); });
 document.querySelectorAll('[data-control]').forEach(button => { const control = button.dataset.control;['pointerdown', 'pointerup', 'pointercancel', 'pointerleave'].forEach(type => button.addEventListener(type, event => { event.preventDefault(); setControl(control, type === 'pointerdown'); })); });
@@ -149,6 +180,8 @@ function returnToMenu() { if (game) game.running = false; game = null; bgm.pause
 function setupVolumeControls() {
   const toggleBtn = document.querySelector('#sound-toggle');
   if (!toggleBtn) return null;
+  // ADD THIS LINE: Force the icon to muted on startup
+  toggleBtn.textContent = '🔇';
   toggleBtn.classList.remove('absolute', 'right-0', 'top-2.5', 'max-[520px]:static', 'max-[520px]:mt-2.5');
 
   const style = document.createElement('style');
